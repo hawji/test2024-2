@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>싸이클 루틴 + 타이머</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 10px;
+        }
+        .week-selector {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .week-selector h2 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+        .week-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .week-btn {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            background: white;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .week-btn:active {
+            transform: scale(0.95);
+        }
+        .week-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+        .routine-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .routine-card h3 {
+            font-size: 1.3em;
+            color: #667eea;
+            margin-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .routine-step {
+            padding: 15px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+        }
+        .routine-step.warmup { border-left-color: #28a745; }
+        .routine-step.interval { border-left-color: #dc3545; }
+        .routine-step.steady { border-left-color: #ffc107; }
+        .routine-step.cooldown { border-left-color: #17a2b8; }
+        .step-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .step-detail {
+            font-size: 0.95em;
+            color: #666;
+            line-height: 1.6;
+        }
+        .speed-high {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .speed-low {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .timer-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .timer-section h3 {
+            font-size: 1.3em;
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .timer-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .timer-phase {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+        .timer-time {
+            font-size: 4em;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 10px;
+        }
+        .timer-speed {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        .timer-controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .timer-btn {
+            padding: 18px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .timer-btn:active {
+            transform: scale(0.95);
+        }
+        .btn-start {
+            background: #28a745;
+            color: white;
+        }
+        .btn-pause {
+            background: #ffc107;
+            color: #333;
+        }
+        .btn-reset {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-skip {
+            background: #17a2b8;
+            color: white;
+        }
+        .progress-bar {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.1s linear;
+        }
+        .next-phase {
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 15px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        .badge-phase1 { background: #ffe5e5; color: #dc3545; }
+        .badge-phase2 { background: #fff4e5; color: #ffa500; }
+        .badge-phase3 { background: #e5f5ff; color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚴‍♂️ 싸이클 루틴 & 타이머</h1>
+            <p>10월~4월 목표: 68kg</p>
+        </div>
+
+        <div class="week-selector">
+            <h2>📅 주차 선택</h2>
+            <div class="week-buttons" id="weekButtons"></div>
+        </div>
+
+        <div class="routine-card" id="routineCard">
+            <h3 id="routineTitle">루틴 선택</h3>
+            <div id="routineContent"></div>
+        </div>
+
+        <div class="timer-section">
+            <h3>⏱️ 인터벌 타이머</h3>
+            <div class="timer-display">
+                <div class="timer-phase" id="timerPhase">준비</div>
+                <div class="timer-time" id="timerTime">00:00</div>
+                <div class="timer-speed" id="timerSpeed">-</div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="timer-controls">
+                <button class="timer-btn btn-start" onclick="startTimer()">▶️ 시작</button>
+                <button class="timer-btn btn-pause" onclick="pauseTimer()">⏸️ 일시정지</button>
+                <button class="timer-btn btn-skip" onclick="skipPhase()">⏭️ 다음단계</button>
+                <button class="timer-btn btn-reset" onclick="resetTimer()">🔄 리셋</button>
+            </div>
+            <div class="next-phase" id="nextPhase">다음: -</div>
+        </div>
+    </div>
+
+    <script>
+        // 주차별 루틴 데이터
+        const weeklyRoutines = {
+            // 1단계: 10/18 ~ 12/15 (8주)
+            week1: {
+                title: "1주차 (10/18~10/24)",
+                badge: "phase1",
+                badgeText: "1단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "18~22km/h", detail: "천천히 페달링, 몸 준비"},
+                    {type: "interval", title: "인터벌", time: 20, speed: "33~36↔20km/h", detail: "1분 고강도 + 1분 회복 × 10세트", intervals: [{high: 1, low: 1, sets: 10}]},
+                    {type: "steady", title: "지속 유산소", time: 20, speed: "25~28km/h", detail: "일정 속도 유지"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "천천히 속도 줄이기"}
+                ]
+            },
+            week2: {
+                title: "2주차 (10/25~10/31)",
+                badge: "phase1",
+                badgeText: "1단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "20~22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌", time: 20, speed: "35~37↔20km/h", detail: "1분 고강도 + 1분 회복 × 10세트", intervals: [{high: 1, low: 1, sets: 10}]},
+                    {type: "steady", title: "지속 유산소", time: 20, speed: "27~28km/h", detail: "일정 속도 유지"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "회복"}
+                ]
+            },
+            week3: {
+                title: "3주차 (11/1~11/7)",
+                badge: "phase1",
+                badgeText: "1단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "20~22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌", time: 20, speed: "35~38↔20km/h", detail: "1분 고강도 + 1분 회복 × 10세트", intervals: [{high: 1, low: 1, sets: 10}]},
+                    {type: "steady", title: "지속 유산소", time: 20, speed: "27~29km/h", detail: "일정 속도 유지"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "회복"}
+                ]
+            },
+            week4: {
+                title: "4주차 (11/8~11/14)",
+                badge: "phase1",
+                badgeText: "1단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "20~22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌", time: 20, speed: "36~38↔20km/h", detail: "1분 고강도 + 1분 회복 × 10세트", intervals: [{high: 1, low: 1, sets: 10}]},
+                    {type: "steady", title: "지속 유산소", time: 20, speed: "28~30km/h", detail: "일정 속도 유지"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "회복"}
+                ]
+            },
+            week5: {
+                title: "5주차 (11/15~11/21)",
+                badge: "phase1",
+                badgeText: "1단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "20~22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌", time: 20, speed: "36~38↔20km/h", detail: "1분 고강도 + 1분 회복 × 10세트", intervals: [{high: 1, low: 1, sets: 10}]},
+                    {type: "steady", title: "지속 유산소", time: 20, speed: "28~30km/h", detail: "일정 속도 유지"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "회복"}
+                ]
+            },
+            week6: {
+                title: "6주차 (11/22~11/28)",
+                badge: "phase1",
+                badgeText: "1단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "20~22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌", time: 20, speed: "36~38↔20km/h", detail: "1분 고강도 + 1분 회복 × 10세트", intervals: [{high: 1, low: 1, sets: 10}]},
+                    {type: "steady", title: "지속 유산소", time: 20, speed: "28~30km/h", detail: "일정 속도 유지"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "회복"}
+                ]
+            },
+            week7: {
+                title: "7주차 (11/29~12/5)",
+                badge: "phase1",
+                badgeText: "1단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "20~22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌", time: 20, speed: "36~38↔20km/h", detail: "1분 고강도 + 1분 회복 × 10세트", intervals: [{high: 1, low: 1, sets: 10}]},
+                    {type: "steady", title: "지속 유산소", time: 20, speed: "28~30km/h", detail: "일정 속도 유지"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "회복"}
+                ]
+            },
+            week8: {
+                title: "8주차 (12/6~12/12)",
+                badge: "phase1",
+                badgeText: "1단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "20~22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌", time: 20, speed: "36~38↔20km/h", detail: "1분 고강도 + 1분 회복 × 10세트", intervals: [{high: 1, low: 1, sets: 10}]},
+                    {type: "steady", title: "지속 유산소", time: 20, speed: "28~30km/h", detail: "일정 속도 유지"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "회복"}
+                ]
+            },
+            // 2단계: 12/16 ~ 2/15 (8주)
+            week9: {
+                title: "9주차 (12/13~12/19)",
+                badge: "phase2",
+                badgeText: "2단계 전환",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "20km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌 강화", time: 25, speed: "34~37↔20km/h", detail: "2분 고강도 + 1분 회복 × 8세트", intervals: [{high: 2, low: 1, sets: 8}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "27~29km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "회복"}
+                ]
+            },
+            week10: {
+                title: "10주차 (12/20~12/26)",
+                badge: "phase2",
+                badgeText: "2단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "20km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌 강화", time: 25, speed: "34~37↔20km/h", detail: "2분 고강도 + 1분 회복 × 8세트", intervals: [{high: 2, low: 1, sets: 8}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "27~29km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "회복"}
+                ]
+            },
+            week11: {
+                title: "11주차 (12/27~1/2)",
+                badge: "phase2",
+                badgeText: "2단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "20km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌", time: 25, speed: "34~37↔20km/h", detail: "2분 고강도 + 1분 회복 × 8세트", intervals: [{high: 2, low: 1, sets: 8}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "27~29km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "회복"}
+                ]
+            },
+            week12: {
+                title: "12주차 (1/3~1/9)",
+                badge: "phase2",
+                badgeText: "2단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "20km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌", time: 25, speed: "34~37↔20km/h", detail: "2분 고강도 + 1분 회복 × 8세트", intervals: [{high: 2, low: 1, sets: 8}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "27~29km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "회복"}
+                ]
+            },
+            week13: {
+                title: "13주차 (1/10~1/16)",
+                badge: "phase2",
+                badgeText: "2단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "20km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌", time: 25, speed: "35~37↔20km/h", detail: "2분 고강도 + 1분 회복 × 8세트", intervals: [{high: 2, low: 1, sets: 8}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "28~29km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "회복"}
+                ]
+            },
+            week14: {
+                title: "14주차 (1/17~1/23)",
+                badge: "phase2",
+                badgeText: "2단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "20km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌", time: 25, speed: "35~37↔20km/h", detail: "2분 고강도 + 1분 회복 × 8세트", intervals: [{high: 2, low: 1, sets: 8}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "28~29km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "회복"}
+                ]
+            },
+            week15: {
+                title: "15주차 (1/24~1/30)",
+                badge: "phase2",
+                badgeText: "2단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "20km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌", time: 25, speed: "35~37↔20km/h", detail: "2분 고강도 + 1분 회복 × 8세트", intervals: [{high: 2, low: 1, sets: 8}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "28~29km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "회복"}
+                ]
+            },
+            week16: {
+                title: "16주차 (1/31~2/6)",
+                badge: "phase2",
+                badgeText: "2단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "20km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌", time: 25, speed: "35~37↔20km/h", detail: "2분 고강도 + 1분 회복 × 8세트", intervals: [{high: 2, low: 1, sets: 8}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "28~30km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 15, speed: "18~20km/h", detail: "회복"}
+                ]
+            },
+            // 3단계: 2/16 ~ 4/30 (10주)
+            week17: {
+                title: "17주차 (2/7~2/13)",
+                badge: "phase3",
+                badgeText: "3단계 전환",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌 최종", time: 30, speed: "35~38↔22km/h", detail: "3분 고강도 + 1분 회복 × 7세트", intervals: [{high: 3, low: 1, sets: 7}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "28~30km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 10, speed: "18km/h", detail: "회복"}
+                ]
+            },
+            week18: {
+                title: "18주차 (2/14~2/20)",
+                badge: "phase3",
+                badgeText: "3단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌 최종", time: 30, speed: "35~38↔22km/h", detail: "3분 고강도 + 1분 회복 × 7세트", intervals: [{high: 3, low: 1, sets: 7}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "28~30km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 10, speed: "18km/h", detail: "회복"}
+                ]
+            },
+            week19: {
+                title: "19주차 (2/21~2/27)",
+                badge: "phase3",
+                badgeText: "3단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌 최종", time: 30, speed: "35~38↔22km/h", detail: "3분 고강도 + 1분 회복 × 7세트", intervals: [{high: 3, low: 1, sets: 7}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "28~30km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 10, speed: "18km/h", detail: "회복"}
+                ]
+            },
+            week20: {
+                title: "20주차 (2/28~3/6)",
+                badge: "phase3",
+                badgeText: "3단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌 최종", time: 30, speed: "36~38↔22km/h", detail: "3분 고강도 + 1분 회복 × 7세트", intervals: [{high: 3, low: 1, sets: 7}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "28~30km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 10, speed: "18km/h", detail: "회복"}
+                ]
+            },
+            week21: {
+                title: "21주차 (3/7~3/13)",
+                badge: "phase3",
+                badgeText: "3단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌 최종", time: 30, speed: "36~38↔22km/h", detail: "3분 고강도 + 1분 회복 × 7세트", intervals: [{high: 3, low: 1, sets: 7}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "29~30km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 10, speed: "18km/h", detail: "회복"}
+                ]
+            },
+            week22: {
+                title: "22주차 (3/14~3/20)",
+                badge: "phase3",
+                badgeText: "3단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌 최종", time: 30, speed: "36~38↔22km/h", detail: "3분 고강도 + 1분 회복 × 7세트", intervals: [{high: 3, low: 1, sets: 7}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "29~30km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 10, speed: "18km/h", detail: "회복"}
+                ]
+            },
+            week23: {
+                title: "23주차 (3/21~3/27)",
+                badge: "phase3",
+                badgeText: "3단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌 최종", time: 30, speed: "36~38↔22km/h", detail: "3분 고강도 + 1분 회복 × 7세트", intervals: [{high: 3, low: 1, sets: 7}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "29~30km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 10, speed: "18km/h", detail: "회복"}
+                ]
+            },
+            week24: {
+                title: "24주차 (3/28~4/3)",
+                badge: "phase3",
+                badgeText: "3단계",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌 최종", time: 30, speed: "37~38↔22km/h", detail: "3분 고강도 + 1분 회복 × 7세트", intervals: [{high: 3, low: 1, sets: 7}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "29~30km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 10, speed: "18km/h", detail: "회복"}
+                ]
+            },
+            week25: {
+                title: "25주차 (4/4~4/10)",
+                badge: "phase3",
+                badgeText: "3단계 마무리",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌 최종", time: 30, speed: "37~38↔22km/h", detail: "3분 고강도 + 1분 회복 × 7세트", intervals: [{high: 3, low: 1, sets: 7}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "30km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 10, speed: "18km/h", detail: "회복"}
+                ]
+            },
+            week26: {
+                title: "26주차 (4/11~4/17)",
+                badge: "phase3",
+                badgeText: "3단계 마무리",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌 최종", time: 30, speed: "37~38↔22km/h", detail: "3분 고강도 + 1분 회복 × 7세트", intervals: [{high: 3, low: 1, sets: 7}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "30km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 10, speed: "18km/h", detail: "회복"}
+                ]
+            },
+            week27: {
+                title: "27주차 (4/18~4/24)",
+                badge: "phase3",
+                badgeText: "목표 달성",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌 최종", time: 30, speed: "37~38↔22km/h", detail: "3분 고강도 + 1분 회복 × 7세트", intervals: [{high: 3, low: 1, sets: 7}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "30km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 10, speed: "18km/h", detail: "회복"}
+                ]
+            },
+            week28: {
+                title: "28주차 (4/25~4/30)",
+                badge: "phase3",
+                badgeText: "🎉 68kg 달성!",
+                routine: [
+                    {type: "warmup", title: "워밍업", time: 5, speed: "22km/h", detail: "몸 준비"},
+                    {type: "interval", title: "인터벌 최종", time: 30, speed: "37~38↔22km/h", detail: "3분 고강도 + 1분 회복 × 7세트", intervals: [{high: 3, low: 1, sets: 7}]},
+                    {type: "steady", title: "지속 유산소", time: 15, speed: "30km/h", detail: "일정 속도"},
+                    {type: "cooldown", title: "쿨다운", time: 10, speed: "18km/h", detail: "회복"}
+                ]
+            }
+        };
+
+        let currentWeek = 'week1';
+        let timerInterval = null;
+        let isPaused = false;
+        let currentPhaseIndex = 0;
+        let currentTime = 0;
+        let totalTime = 0;
+        let currentIntervalSet = 0;
+        let isHighIntensity = true;
+
+        // 주차 버튼 생성
+        function initWeekButtons() {
+            const container = document.getElementById('weekButtons');
+            for (let i = 1; i <= 28; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'week-btn';
+                btn.textContent = `${i}주차`;
+                btn.onclick = () => selectWeek(`week${i}`);
+                if (i === 1) btn.classList.add('active');
+                container.appendChild(btn);
+            }
+        }
+
+        // 주차 선택
+        function selectWeek(week) {
+            currentWeek = week;
+            document.querySelectorAll('.week-btn').forEach((btn, idx) => {
+                btn.classList.toggle('active', idx === parseInt(week.replace('week', '')) - 1);
+            });
+            displayRoutine();
+            resetTimer();
+        }
+
+        // 루틴 표시
+        function displayRoutine() {
+            const routine = weeklyRoutines[currentWeek];
+            document.getElementById('routineTitle').innerHTML = `
+                ${routine.title} <span class="badge badge-${routine.badge}">${routine.badgeText}</span>
+            `;
+            
+            let html = '';
+            routine.routine.forEach((step, idx) => {
+                html += `
+                    <div class="routine-step ${step.type}">
+                        <div class="step-title">
+                            <span>${idx + 1}. ${step.title} (${step.time}분)</span>
+                            <span>${step.speed}</span>
+                        </div>
+                        <div class="step-detail">${step.detail}</div>
+                    </div>
+                `;
+            });
+            document.getElementById('routineContent').innerHTML = html;
+        }
+
+        // 타이머 시작
+        function startTimer() {
+            if (timerInterval) return;
+            
+            isPaused = false;
+            const routine = weeklyRoutines[currentWeek].routine;
+            
+            if (currentPhaseIndex === 0 && currentTime === 0) {
+                totalTime = routine.reduce((sum, phase) => sum + phase.time * 60, 0);
+            }
+
+            timerInterval = setInterval(() => {
+                if (isPaused) return;
+
+                const currentPhase = routine[currentPhaseIndex];
+                
+                // 인터벌 처리
+                if (currentPhase.intervals) {
+                    const interval = currentPhase.intervals[0];
+                    const cycleTime = (interval.high + interval.low) * 60;
+                    const phaseTime = currentTime % cycleTime;
+                    
+                    if (phaseTime < interval.high * 60) {
+                        isHighIntensity = true;
+                    } else {
+                        isHighIntensity = false;
+                    }
+                    
+                    currentIntervalSet = Math.floor(currentTime / cycleTime) + 1;
+                }
+
+                currentTime++;
+                updateTimerDisplay();
+
+                // 단계 완료 체크
+                if (currentTime >= currentPhase.time * 60) {
+                    currentTime = 0;
+                    currentPhaseIndex++;
+                    currentIntervalSet = 0;
+                    
+                    // 사운드 재생 (진동)
+                    if (navigator.vibrate) {
+                        navigator.vibrate([200, 100, 200]);
+                    }
+                    
+                    // 전체 완료
+                    if (currentPhaseIndex >= routine.length) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                        alert('🎉 운동 완료! 수고했어!');
+                        resetTimer();
+                        return;
+                    }
+                }
+            }, 1000);
+        }
+
+        // 타이머 일시정지
+        function pauseTimer() {
+            isPaused = !isPaused;
+            document.querySelector('.btn-pause').textContent = isPaused ? '▶️ 계속' : '⏸️ 일시정지';
+        }
+
+        // 다음 단계로
+        function skipPhase() {
+            const routine = weeklyRoutines[currentWeek].routine;
+            currentTime = 0;
+            currentPhaseIndex++;
+            currentIntervalSet = 0;
+            
+            if (currentPhaseIndex >= routine.length) {
+                resetTimer();
+            } else {
+                updateTimerDisplay();
+            }
+        }
+
+        // 타이머 리셋
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            isPaused = false;
+            currentPhaseIndex = 0;
+            currentTime = 0;
+            currentIntervalSet = 0;
+            isHighIntensity = true;
+            document.querySelector('.btn-pause').textContent = '⏸️ 일시정지';
+            updateTimerDisplay();
+        }
+
+        // 타이머 디스플레이 업데이트
+        function updateTimerDisplay() {
+            const routine = weeklyRoutines[currentWeek].routine;
+            
+            if (currentPhaseIndex >= routine.length) {
+                document.getElementById('timerPhase').textContent = '완료!';
+                document.getElementById('timerTime').textContent = '00:00';
+                document.getElementById('timerSpeed').textContent = '수고했어! 🎉';
+                document.getElementById('progressFill').style.width = '100%';
+                document.getElementById('nextPhase').textContent = '운동 완료';
+                return;
+            }
+
+            const currentPhase = routine[currentPhaseIndex];
+            const remainingTime = (currentPhase.time * 60) - currentTime;
+            const minutes = Math.floor(remainingTime / 60);
+            const seconds = remainingTime % 60;
+
+            // 단계 표시
+            let phaseText = `${currentPhaseIndex + 1}. ${currentPhase.title}`;
+            if (currentPhase.intervals && currentIntervalSet > 0) {
+                phaseText += ` (${currentIntervalSet}/${currentPhase.intervals[0].sets}세트)`;
+            }
+            document.getElementById('timerPhase').textContent = phaseText;
+
+            // 시간 표시
+            document.getElementById('timerTime').textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+            // 속도 표시
+            let speedText = currentPhase.speed;
+            if (currentPhase.intervals) {
+                const speeds = currentPhase.speed.split('↔');
+                speedText = isHighIntensity ? 
+                    `<span class="speed-high">${speeds[0]} 🔥</span>` : 
+                    `<span class="speed-low">${speeds[1]} 💚</span>`;
+            }
+            document.getElementById('timerSpeed').innerHTML = speedText;
+
+            // 진행률
+            const progress = (currentTime / (currentPhase.time * 60)) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+
+            // 다음 단계
+            if (currentPhaseIndex < routine.length - 1) {
+                const nextPhase = routine[currentPhaseIndex + 1];
+                document.getElementById('nextPhase').textContent = 
+                    `다음: ${nextPhase.title} (${nextPhase.time}분, ${nextPhase.speed})`;
+            } else {
+                document.getElementById('nextPhase').textContent = '다음: 운동 완료!';
+            }
+        }
+
+        // 초기화
+        initWeekButtons();
+        displayRoutine();
+        updateTimerDisplay();
+    </script>
+</body>
+</html>
